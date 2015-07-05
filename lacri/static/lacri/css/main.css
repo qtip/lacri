@@ -1,0 +1,68 @@
+/*h2 {*/
+    /*font-variant: small-caps;*/
+/*}*/
+/*button.button-primary {*/
+    /*background-color:#ff584f;*/
+    /*border-color:#ff584f;*/
+/*}*/
+section.header h4 {
+    display: inline-block;
+    font-weight: bold;
+    letter-spacing: 0.1em;
+}
+section.header {
+    border-bottom-style: solid;
+    border-bottom-width: 25px;
+    border-color: #4e5468;
+    margin-bottom: 3rem;
+    padding: 1.5rem 0;
+}
+
+
+/*section.header h1, section.header img {*/
+    /*display: inline-block;*/
+/*}*/
+/*body {*/
+    /*background-color:#262933;*/
+/*}*/
+/*h1, h2, h3, h4, h5, p, a {*/
+    /*color: white;*/
+/*}*/
+
+/*section {*/
+    /*padding: 8rem 0 7rem;*/
+    /*text-align: center;*/
+/*}*/
+
+/*section.header h1 {*/
+    /*letter-spacing: 10px;*/
+    /*font-size: 7.0rem;*/
+    /*font-weight: bold;*/
+/*}*/
+
+/*section.account {*/
+    /*background-color: #FF584F;*/
+    /*margin-left: auto;*/
+    /*margin-right: auto;*/
+/*}*/
+
+/*section.account form {*/
+    /*margin: 0;*/
+/*}*/
+
+/*section.account input#submit {*/
+    /*background-color:#a45357;*/
+    /*border-color:#a45357;*/
+/*}*/
+
+/*section.account .row.login-row {*/
+    /*padding-top: 3.0rem;*/
+    /*padding-bottom: 0.0rem;*/
+/*}*/
+
+/*section.info {*/
+    /*background-color:*/
+    /*max-width: 25%;*/
+    /*margin-left: auto;*/
+    /*margin-right: auto;*/
+/*}*/

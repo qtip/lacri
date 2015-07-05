@@ -1,0 +1,32 @@
+.dark {
+    color: white;
+    background-color: #262933;
+}
+
+.dark a {
+    color: white;
+}
+
+.light a {
+    color:#ff584f;
+}
+
+.light .button-primary, .light input[type="submit"].button-primary {
+    background-color:#ff584f;
+    border-color:#ff584f;
+}
+
+.light .button-primary:hover, .light input[type="submit"].button-primary:hover {
+    background-color:#ff817a;
+    border-color:#ff817a;
+}
+
+.light .button-primary:active, .light input[type="submit"].button-primary:active {
+    background-color:#ff817a;
+    border-color:#ff817a;
+}
+
+h1, h2, h3, h4, h5, thead {
+    font-variant: small-caps;
+}
+

@@ -55,3 +55,7 @@ docs/_build/
 
 # PyBuilder
 target/
+
+# from ./manage.py collectstatic
+/static
+

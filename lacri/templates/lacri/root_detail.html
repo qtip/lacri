@@ -1,0 +1,88 @@
+{% extends 'lacri/main.html' %}
+
+{% load staticfiles %}
+{% load compress %}
+
+{% block css %}
+  {{ block.super }}
+  <link href="{% static 'lacri/css/main.css' %}" rel="stylesheet">
+{% endblock %}
+
+{% block title %}lacri{% endblock %}
+
+{% block js %}
+  <script type="text/javascript" charset="utf-8">
+    var createRootForm = document.getElementById("create_domain_form");
+    var commonName = document.getElementById("id_common_name");
+    commonName.style.visibility = "hidden";
+    createRootForm.onsubmit = function() {
+      if (commonName.style.visibility != "visible") {
+        commonName.style.visibility = "visible";
+        commonName.focus();
+        return false;
+      }
+      return true;
+    }
+  </script>
+{% endblock %}
+
+{% block details %}
+  <section class="root light">
+    <div class="container">
+      <h2>{{ root.common_name }}</h2>
+    </div>
+  </section>
+  <section class="roots light">
+    <div class="container">
+      <div class="row">
+        <div class="seven columns">
+          <h4>Domains</h4>
+        </div>
+        <div class="five columns ">
+          <form method="post" id="create_domain_form">
+            {% csrf_token %}
+            {{ form.common_name }}
+            <input type="submit" class="button-primary" value="Create" />
+          </form>
+        </div>
+      </div>
+      <div class="row">
+        <table class="u-full-width">
+          <thead>
+            <tr>
+              <th>Name</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for domain in domains %}
+            <tr>
+              <td><a href="{% url 'domain_detail' username=user.username root_slug=domain.parent.slug domain=domain.common_name%}">{{ domain.common_name }}</a></td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+  <section class="downloads light">
+    <div class="container">
+      <div class="row">
+        <h4>Downloads</h4>
+      </div>
+      <div class="row">
+        <p><a href='{% url 'root_pem' username=user.username root_slug=root.slug %}'>{{ root.slug }}.pem</a></p>
+      </div>
+    </div>
+  </section>
+  <section class="trust arch light">
+    <div class="container">
+      <div class="row">
+        <h4>Trust this root on arch linux</h4>
+      </div>
+      <div class="row">
+        <pre><code>curl http://{{ site.domain }}{% url 'root_pem' username=user.username root_slug=root.slug %} &gt; /etc/ca-certificates/trust-source/anchors/{{ root.slug }}.pem
+update-ca-trust</pre></code>
+      </div>
+    </div>
+  </section>
+{% endblock %}
