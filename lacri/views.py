@@ -75,7 +75,7 @@ def root_detail(request, username, root_slug):
         form = CreateDomainForm()
     site = Site.objects.get_current()
     domains = root.authority_set.filter(usage=Authority.DOMAIN)
-    return render(request, "lacri/root_detail.html", {'site': site, 'user':user, 'root': root, 'domains':domains, 'form': form})
+    return render(request, "lacri/root_detail.html", {'request': request, 'site': site, 'user':user, 'root': root, 'domains':domains, 'form': form})
 
 def root_pem(request, username, root_slug):
     user = get_object_or_404(User, username=username)
@@ -93,7 +93,7 @@ def domain_detail(request, username, root_slug, domain):
     user = get_object_or_404(User, username=username)
     root = get_object_or_404(Authority, user__username=username, slug=root_slug)
     domain = root.authority_set.filter(usage=Authority.DOMAIN, parent=root, common_name=domain).get()
-    return render(request, "lacri/domain_detail.html", {'site': site, 'user':user, 'root': root, 'domain':domain})
+    return render(request, "lacri/domain_detail.html", {'request': request, 'site': site, 'user':user, 'root': root, 'domain':domain})
 
 def domain_cert(request, username, root_slug, domain):
     return "asdf"

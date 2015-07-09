@@ -79,7 +79,7 @@
         <h4>Trust this root on arch linux</h4>
       </div>
       <div class="row">
-        <pre><code>curl http://{{ site.domain }}{% url 'root_pem' username=user.username root_slug=root.slug %} &gt; /etc/ca-certificates/trust-source/anchors/{{ root.slug }}.pem
+        <pre><code>curl {{ request.scheme }}://{{ site.domain }}{% url 'root_pem' username=user.username root_slug=root.slug %} &gt; /etc/ca-certificates/trust-source/anchors/{{ root.slug }}.pem
 update-ca-trust</pre></code>
       </div>
     </div>
