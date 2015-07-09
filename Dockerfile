@@ -14,4 +14,5 @@ ADD requirements.txt /code/
 RUN pip install -r requirements.txt
 ADD . /code/
 EXPOSE 3031
-CMD uwsgi --socket 0.0.0.0:3031 --chdir /code --plugin python --wsgi-file lacriproject/wsgi.py --master --processes 4 --threads 2 --logto /log/log
+VOLUME ["/static"]
+CMD python manage.py migrate && python manage.py collectstatic --clear --noinput && uwsgi --socket 0.0.0.0:3031 --chdir /code --wsgi-file lacriproject/wsgi.py --master --processes 4 --threads 2
