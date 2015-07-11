@@ -13,12 +13,12 @@ class AuthorityAdmin(admin.ModelAdmin):
         try:
             return preformatted(network.key_decrypted())
         except Exception as e:
-            return u"<b style='color:red'>{}</b>".format(unicode(e))
+            return "<b style='color:red'>{}</b>".format(str(e))
     def cert_as_text(self, network):
         try:
             return preformatted(network.cert_as_text())
         except Exception as e:
-            return u"<b style='color:red'>{}</b>".format(unicode(e))
+            return "<b style='color:red'>{}</b>".format(str(e))
     readonly_fields = ('cert_as_text', 'key_decrypted')
     #inlines = [ClientInline]
     #actions=[generate_pki, generate_client_certs]

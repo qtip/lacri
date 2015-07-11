@@ -1,5 +1,5 @@
 import datetime
-from StringIO import StringIO
+from io import StringIO
 import logging
 import hashlib
 
@@ -147,7 +147,7 @@ class Authority(models.Model):
             tar.add("ssl/{self.common_name}.crt".format(self=self), self.cert_chain())
             tar.add("ssl/{self.common_name}.key".format(self=self), self.key_decrypted())
         except Exception as e:
-            logger.error(unicode(e))
+            logger.error(str(e))
             raise
 
     def _pkey(self):

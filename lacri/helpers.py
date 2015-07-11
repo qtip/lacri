@@ -1,6 +1,6 @@
 import time
 import tarfile
-from StringIO import StringIO
+from io import StringIO
 from collections import OrderedDict
 
 class TarWriter(object):
@@ -14,7 +14,7 @@ class TarWriter(object):
         info = tarfile.TarInfo(name)
         info.size = data.tell()
         info.mtime = int(time.time())
-        info.mode = 0640
+        info.mode = 0o640
         info.type = tarfile.REGTYPE
         data.seek(0)
         self.tar.addfile(info, data)
@@ -23,7 +23,7 @@ class TarWriter(object):
     def dir(self, name):
         info = tarfile.TarInfo(name)
         info.mtime = int(time.time())
-        info.mode = 0640
+        info.mode = 0o640
         info.type = tarfile.DIRTYPE
         self.tar.addfile(info)
 

@@ -1,4 +1,4 @@
-FROM python:2.7
+FROM python:3.4
 RUN apt-get update
 RUN apt-get install -y --no-install-recommends \
   swig \
@@ -6,8 +6,6 @@ RUN apt-get install -y --no-install-recommends \
   dpkg-dev
 RUN pip install uwsgi
 ENV PYTHONUNBUFFERED 1
-# apparently a bug in the debian package
-RUN ln -s /usr/lib/python2.7/plat-*/_sysconfigdata_nd.py /usr/lib/python2.7/
 RUN mkdir /code
 WORKDIR /code
 ADD requirements.txt /code/
