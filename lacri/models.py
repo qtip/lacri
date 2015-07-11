@@ -161,5 +161,8 @@ class Authority(models.Model):
             return ""
         return self._pkey().as_pem(cipher=None)
 
+    def __repr__(self):
+        return "{0}('{self.common_name}', user=User('{self.user.username}'), usage='{self.usage}')".format(self.__class__.__name__, self=self)
+
     def __unicode__(self):
-        return "{0}('{self.common_name}', usage='{self.usage}')".format(self.__class__.__name__, self=self)
+        return self.common_name
