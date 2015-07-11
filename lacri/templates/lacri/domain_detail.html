@@ -22,7 +22,7 @@
       </div>
       <div class="row">
         <pre><code>cd /etc/nginx
-curl {{ view.request.scheme }}://{{ site.domain }}{% url 'domain_tar' username=user.username root_slug=root.slug domain=domain.common_name %} | tar xf -</pre></code>
+curl -b "sessionid={{ view.request.session.session_key }}" {{ view.request.scheme }}://{{ site.domain }}{% url 'domain_tar' username=user.username root_slug=root.slug domain=domain.common_name %} | tar xf -</pre></code>
         <pre><code>server {
         # ...
         listen 443 ssl;
@@ -41,7 +41,7 @@ curl {{ view.request.scheme }}://{{ site.domain }}{% url 'domain_tar' username=u
       <div class="row">
         <p>TODO: apache2 instructions</p>
         <pre><code>cd /etc/apache2
-curl {{ view.request.scheme }}://{{ site.domain }}{% url 'domain_tar' username=user.username root_slug=root.slug domain=domain.common_name %} | tar xf -</pre></code>
+curl "sessionid={{ view.request.session.session_key }}" {{ view.request.scheme }}://{{ site.domain }}{% url 'domain_tar' username=user.username root_slug=root.slug domain=domain.common_name %} | tar xf -</pre></code>
         <pre><code>&lt;IfModule mod_ssl.c&gt;
     &lt;VirtualHost _default_:443&gt;
         # ...

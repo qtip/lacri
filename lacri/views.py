@@ -169,7 +169,7 @@ class DomainCertDerView(DomainDetailBase):
         content_type="application/x-x509-ca-cert"
         raise NotImplementedError()
 
-class DomainTarView(DomainDetailBase):
+class DomainTarView(VerifyUserMixin, DomainDetailBase):
     def get(self, request, *args, **kwargs):
         context = self.get_context_data(**kwargs)
         response = HttpResponse(content_type="application/x-tar")
