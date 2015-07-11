@@ -69,7 +69,25 @@
         <h4>Downloads</h4>
       </div>
       <div class="row">
-        <p><a href='{% url 'root_cert_pem' username=user.username root_slug=root.slug ext='pem' %}'>{{ root.slug }}.pem</a></p>
+        <table class="u-full-width">
+          <thead>
+            <tr>
+              <th>File</th>
+              <th>Description</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><a href='{% url 'root_cert_pem' username=username root_slug=root_slug ext='pem' %}'>{{ root.slug }}.pem</a></td>
+              <td>PEM formatted certificate</td>
+            </tr>
+            <tr>
+              <td><a href='{% url 'root_cert_pem' username=username root_slug=root_slug ext='crt' %}'>{{ root.slug }}.crt</a></td>
+              <td>PEM formatted certificate</td>
+            </tr>
+          </tbody>
+        </table>
+        <p></p>
       </div>
     </div>
   </section>
