@@ -16,34 +16,55 @@ from .forms import CreateUserForm, CreateRootForm, CreateDomainForm
 
 logger = logging.getLogger('lacri')
 
-class IndexView(View):
+class IndexView(TemplateResponseMixin, View):
+    template_name = "lacri/index.html"
+
     def get(self, request):
-        return render(request, "lacri/index.html", {"form": CreateUserForm()})
+        return self.render_to_response({"form": CreateUserForm()})
 
     def post(self, request):
         form = CreateUserForm(request.POST)
         if form.is_valid():
-            username = form.cleaned_data['username']
-            password = form.cleaned_data['password']
+            return self.form_valid(form)
+        else:
+            return self.form_invalid(form)
+
+    def form_invalid(self, form):
+        # Display form validation errors
+        return self.render_to_response({"form": form})
+
+    def form_valid(self, form):
+        username = form.cleaned_data['username']
+        password = form.cleaned_data['password']
+        user = authenticate(username=username, password=password)
+        if user is None:
+            return self.user_not_found(form, username, password)
+        else:
+            return self.user_found(form, user)
+
+    def user_found(self, form, user):
+        if user.is_active:
+            # User log in
+            login(self.request, user)
+            return HttpResponseRedirect(reverse('user_detail', kwargs={'username': user.username}))
+        else:
+            # User disabled error
+            form.add_error('username', 'Account disabled')
+            return self.render_to_response({"form": form})
+
+    def user_not_found(self, form, username, password):
+        try:
+            # Create new user
+            site = Site.objects.get_current()
+            user = User.objects.create_user(username, '{}@{}'.format(username, site.domain), password)
+            user.save()
             user = authenticate(username=username, password=password)
-            if user is not None:
-                if user.is_active:
-                    login(request, user)
-                    return HttpResponseRedirect(reverse('user_detail', kwargs={'username': username}))
-                else:
-                    # disabled account
-                    pass
-            else:
-                try:
-                    site = Site.objects.get_current()
-                    user = User.objects.create_user(username, '{}@{}'.format(username, site.domain), password)
-                    user.save()
-                    user = authenticate(username=username, password=password)
-                    login(request, user)
-                    return HttpResponseRedirect(reverse('user_detail', kwargs={'username': username}))
-                except IntegrityError:
-                    form.add_error('username', 'Incorrect username/password')
-        return render(request, "lacri/index.html", {"form": form})
+            login(self.request, user)
+            return HttpResponseRedirect(reverse('user_detail', kwargs={'username': username}))
+        except IntegrityError:
+            # User already exists or Wrong password error
+            form.add_error('username', 'Incorrect username/password')
+            return self.render_to_response({"form": form})
 
 class VerifyUserMixin(object):
     def dispatch(self, request, *args, **kwargs):
@@ -60,12 +81,12 @@ class UserDetailView(VerifyUserMixin, TemplateResponseMixin, ContextMixin, View)
         roots = context['roots'] = user.authority_set.filter(usage=Authority.ROOT)
         return context
 
-    def get(self, *args, **kwargs):
+    def get(self, request, *args, **kwargs):
         context = self.get_context_data(**kwargs)
         form = context['form'] = CreateRootForm()
         return self.render_to_response(context)
 
-    def post(self, *args, **kwargs):
+    def post(self, request, *args, **kwargs):
         context = self.get_context_data(**kwargs)
         form = context['form'] = CreateRootForm(self.request.POST)
         if form.is_valid():
@@ -87,12 +108,12 @@ class RootDetailBase(ContextMixin, View):
 class RootDetailView(TemplateResponseMixin, VerifyUserMixin, RootDetailBase):
     template_name = "lacri/root_detail.html"
 
-    def get(self, *args, **kwargs):
+    def get(self, request, *args, **kwargs):
         context = self.get_context_data(**kwargs)
         form = context['form'] = CreateDomainForm()
         return self.render_to_response(context)
 
-    def post(self, *args, **kwargs):
+    def post(self, request, *args, **kwargs):
         context = self.get_context_data(**kwargs)
         form = context['form'] = CreateDomainForm(request.POST)
         if form.is_valid():
@@ -103,40 +124,55 @@ class RootDetailView(TemplateResponseMixin, VerifyUserMixin, RootDetailBase):
         return self.render_to_response(context)
 
 class RootCertPemView(RootDetailBase):
-    def get(self, *args, **kwargs):
+    def get(self, request, *args, **kwargs):
         context = self.get_context_data(**kwargs)
         response = HttpResponse(content_type="application/x-pem-file")
         response.write(context['root'].cert)
         return response
 
+class RootKeyPemView(VerifyUserMixin, RootDetailBase):
+    def get(self, request, *args, **kwargs):
+        context = self.get_context_data(**kwargs)
+        response = HttpResponse(content_type="application/x-pem-file")
+        response.write(context['root'].key_decrypted())
+        return response
+
 class RootCertDerView(View):
-    def get(self, request, username, root_slug):
+    def get(self, request, *args, **kwargs):
         content_type="application/x-x509-ca-cert"
         raise NotImplementedError()
 
-class DomainDetailView(View):
-    def get(self, request, username, root_slug, domain):
-        site = Site.objects.get_current()
-        user = get_object_or_404(User, username=username)
-        root = get_object_or_404(Authority, user__username=username, slug=root_slug)
-        domain = root.authority_set.filter(usage=Authority.DOMAIN, parent=root, common_name=domain).get()
-        return render(request, "lacri/domain_detail.html", {'request': request, 'site': site, 'user':user, 'root': root, 'domain':domain})
+class DomainDetailBase(ContextMixin, View):
+    def get_context_data(self, **kwargs):
+        context = super(DomainDetailBase, self).get_context_data(**kwargs)
+        site = context['site'] = Site.objects.get_current()
+        user = context['user'] = get_object_or_404(User, username=kwargs['username'])
+        root = context['root'] = user.authority_set.filter(usage=Authority.ROOT, slug=kwargs['root_slug']).get()
+        domain = context['domain'] = root.authority_set.filter(usage=Authority.DOMAIN, parent=root, common_name=kwargs['domain']).get()
+        return context
 
-class DomainCertPemView(View):
-    def get(self, request, username, root_slug, domain, ext):
-        user = get_object_or_404(User, username=username)
-        root = get_object_or_404(Authority, user__username=username, slug=root_slug)
-        domain = root.authority_set.filter(usage=Authority.DOMAIN, parent=root, common_name=domain).get()
+class DomainDetailView(TemplateResponseMixin, VerifyUserMixin, DomainDetailBase):
+    template_name = "lacri/domain_detail.html"
+
+    def get(self, request, *args, **kwargs):
+        return self.render_to_response(self.get_context_data(**kwargs))
+
+class DomainCertPemView(DomainDetailBase):
+    def get(self, request, *args, **kwargs):
+        context = self.get_context_data(**kwargs)
         response = HttpResponse(content_type="application/x-pem-file")
-        response.write(domain.cert)
+        response.write(context['domain'].cert)
         return response
 
-class DomainTarView(View):
-    def get(self, request, username, root_slug, domain):
-        user = get_object_or_404(User, username=username)
-        root = get_object_or_404(Authority, user__username=username, slug=root_slug)
-        domain = root.authority_set.filter(usage=Authority.DOMAIN, parent=root, common_name=domain).get()
+class DomainCertDerView(DomainDetailBase):
+    def get(self, request, *args, **kwargs):
+        content_type="application/x-x509-ca-cert"
+        raise NotImplementedError()
+
+class DomainTarView(DomainDetailBase):
+    def get(self, request, *args, **kwargs):
+        context = self.get_context_data(**kwargs)
         response = HttpResponse(content_type="application/x-tar")
-        domain.write_tar(response)
+        context['domain'].write_tar(response)
         return response
 
