@@ -18,7 +18,7 @@
             <img style="height:55px;vertical-align:middle" src="{% static 'lacri/img/pillar-ink-white.png' %}" alt=""></img> 
             <h4>LACRI</h4>
           </div>
-          <a href="{% url 'user_detail' username=user.username %}">{{ user.username }}</a>
+          <a href="{% url 'user_detail' username=user.username %}">{{ view.request.user.username }}</a>
           <a href="{% url 'admin:logout' %}?next=/">log out</a>
         </div>
       </div>

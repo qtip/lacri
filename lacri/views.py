@@ -7,6 +7,7 @@ from django.http import HttpResponse, HttpResponseRedirect
 from django.contrib.auth import authenticate, login
 from django.db import IntegrityError
 from django.views.generic import View
+from django.views.generic.base import ContextMixin, TemplateResponseMixin
 
 from django.contrib.sites.models import Site
 from django.contrib.auth.models import User
@@ -44,52 +45,68 @@ class IndexView(View):
                     form.add_error('username', 'Incorrect username/password')
         return render(request, "lacri/index.html", {"form": form})
 
-class UserDetailView(View):
-    def get(self, request, username):
-        user = get_object_or_404(User, username=username)
-        roots = user.authority_set.filter(usage=Authority.ROOT)
-        return render(request, "lacri/user_detail.html", {'user':user, 'roots':roots, 'form': CreateRootForm()})
+class VerifyUserMixin(object):
+    def dispatch(self, request, *args, **kwargs):
+        if request.user.username != kwargs['username']:
+            return HttpResponse('Unauthorized', status=401)
+        return super(VerifyUserMixin, self).dispatch(request, *args, **kwargs)
 
-    def post(self, request, username):
-        user = get_object_or_404(User, username=username)
-        roots = user.authority_set.filter(usage=Authority.ROOT)
-        form = CreateRootForm(request.POST)
+class UserDetailView(VerifyUserMixin, TemplateResponseMixin, ContextMixin, View):
+    template_name = "lacri/user_detail.html"
+
+    def get_context_data(self, **kwargs):
+        context = super(UserDetailView, self).get_context_data(**kwargs)
+        user = context['user'] = get_object_or_404(User, username=kwargs['username'])
+        roots = context['roots'] = user.authority_set.filter(usage=Authority.ROOT)
+        return context
+
+    def get(self, *args, **kwargs):
+        context = self.get_context_data(**kwargs)
+        form = context['form'] = CreateRootForm()
+        return self.render_to_response(context)
+
+    def post(self, *args, **kwargs):
+        context = self.get_context_data(**kwargs)
+        form = context['form'] = CreateRootForm(self.request.POST)
         if form.is_valid():
             common_name = form.cleaned_data['common_name']
-            root = Authority(user=user, common_name=common_name, usage=Authority.ROOT)
+            root = Authority(user=self.request.user, common_name=common_name, usage=Authority.ROOT)
             root.save()
-            return HttpResponseRedirect(reverse('root_detail', kwargs={'username': username, 'root_slug': root.slug}))
-        roots = user.authority_set.filter(usage=Authority.ROOT)
-        return render(request, "lacri/user_detail.html", {'user':user, 'roots':roots, 'form': form})
+            return HttpResponseRedirect(reverse('root_detail', kwargs={'username': kwargs['username'], 'root_slug': root.slug}))
+        return self.render_to_response(context)
 
-class RootDetailView(View):
-    def get(self, request, username, root_slug):
-        user = get_object_or_404(User, username=username)
-        root = get_object_or_404(Authority, user__username=username, slug=root_slug)
-        site = Site.objects.get_current()
-        domains = root.authority_set.filter(usage=Authority.DOMAIN)
-        form = CreateDomainForm()
-        return render(request, "lacri/root_detail.html", {'request': request, 'site': site, 'user':user, 'root': root, 'domains':domains, 'form': form})
+class RootDetailBase(ContextMixin, View):
+    def get_context_data(self, **kwargs):
+        context = super(RootDetailBase, self).get_context_data(**kwargs)
+        site = context['site'] = Site.objects.get_current()
+        user = context['user'] = get_object_or_404(User, username=kwargs['username'])
+        root = context['root'] = user.authority_set.filter(slug=kwargs['root_slug']).get()
+        domains = context['domains'] = user.authority_set.filter(usage=Authority.DOMAIN, parent=root)
+        return context
 
-    def post(self, request, username, root_slug):
-        user = get_object_or_404(User, username=username)
-        root = get_object_or_404(Authority, user__username=username, slug=root_slug)
-        site = Site.objects.get_current()
-        domains = root.authority_set.filter(usage=Authority.DOMAIN)
-        form = CreateDomainForm(request.POST)
+class RootDetailView(TemplateResponseMixin, VerifyUserMixin, RootDetailBase):
+    template_name = "lacri/root_detail.html"
+
+    def get(self, *args, **kwargs):
+        context = self.get_context_data(**kwargs)
+        form = context['form'] = CreateDomainForm()
+        return self.render_to_response(context)
+
+    def post(self, *args, **kwargs):
+        context = self.get_context_data(**kwargs)
+        form = context['form'] = CreateDomainForm(request.POST)
         if form.is_valid():
             common_name = form.cleaned_data['common_name']
             domain = Authority(user=user, common_name=common_name, parent=root, usage=Authority.DOMAIN)
             domain.save()
-            return HttpResponseRedirect(reverse('domain_detail', kwargs={'username': username, 'root_slug': root.slug, 'domain': domain.common_name}))
-        return render(request, "lacri/root_detail.html", {'request': request, 'site': site, 'user':user, 'root': root, 'domains':domains, 'form': form})
+            return HttpResponseRedirect(reverse('domain_detail', kwargs={'username': kwargs['username'], 'root_slug': kwargs['root_slug'], 'domain': domain.common_name}))
+        return self.render_to_response(context)
 
-class RootCertPemView(View):
-    def get(self, request, username, root_slug, ext):
-        user = get_object_or_404(User, username=username)
-        root = get_object_or_404(Authority, user__username=username, slug=root_slug)
+class RootCertPemView(RootDetailBase):
+    def get(self, *args, **kwargs):
+        context = self.get_context_data(**kwargs)
         response = HttpResponse(content_type="application/x-pem-file")
-        response.write(root.cert)
+        response.write(context['root'].cert)
         return response
 
 class RootCertDerView(View):
