@@ -15,6 +15,9 @@ urlpatterns = patterns('',
     # e.g. /user/alice/root/my-main-ca.der
     url(r'^user/(?P<username>\w+)/root/(?P<root_slug>[\w_-]+).der$', views.RootCertDerView.as_view(), name='root_cert_der'),
 
+    # e.g. /user/alice/root/my-main-ca.key
+    url(r'^user/(?P<username>\w+)/root/(?P<root_slug>[\w_-]+).key$', views.RootKeyPemView.as_view(), name='root_key_pem'),
+
     # e.g. /user/alice/root/my-main-ca/
     url(r'^user/(?P<username>\w+)/root/(?P<root_slug>[\w_-]+)/$', views.RootDetailView.as_view(), name='root_detail'),
 

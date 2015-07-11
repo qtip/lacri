@@ -85,6 +85,10 @@
               <td><a href='{% url 'root_cert_pem' username=username root_slug=root_slug ext='crt' %}'>{{ root.slug }}.crt</a></td>
               <td>PEM formatted certificate</td>
             </tr>
+            <tr>
+              <td><a href='{% url 'root_key_pem' username=username root_slug=root_slug %}'>{{ root.slug }}.key</a></td>
+              <td>PEM formatted unencrypted key</td>
+            </tr>
           </tbody>
         </table>
         <p></p>
