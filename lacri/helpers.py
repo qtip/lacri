@@ -1,6 +1,6 @@
 import time
 import tarfile
-from io import StringIO
+from io import BytesIO
 from collections import OrderedDict
 
 class TarWriter(object):
@@ -8,9 +8,9 @@ class TarWriter(object):
         self.fileobj = fileobj
         self.tar = tarfile.open(fileobj=fileobj, mode='w')
 
-    def add(self, name, text):
-        data = StringIO()
-        data.write(text)
+    def add(self, name, file_bytes):
+        data = BytesIO()
+        data.write(file_bytes)
         info = tarfile.TarInfo(name)
         info.size = data.tell()
         info.mtime = int(time.time())

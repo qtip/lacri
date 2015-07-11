@@ -118,7 +118,7 @@ class RootDetailView(TemplateResponseMixin, VerifyUserMixin, RootDetailBase):
         form = context['form'] = CreateDomainForm(request.POST)
         if form.is_valid():
             common_name = form.cleaned_data['common_name']
-            domain = Authority(user=user, common_name=common_name, parent=root, usage=Authority.DOMAIN)
+            domain = Authority(user=context['user'], common_name=common_name, parent=context['root'], usage=Authority.DOMAIN)
             domain.save()
             return HttpResponseRedirect(reverse('domain_detail', kwargs={'username': kwargs['username'], 'root_slug': kwargs['root_slug'], 'domain': domain.common_name}))
         return self.render_to_response(context)

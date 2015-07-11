@@ -11,7 +11,7 @@ from django.contrib.auth.models import User
 from django.contrib.sites.models import Site
 
 from .helpers import TarWriter
-from M2Crypto import RSA, X509, EVP, m2, Rand, Err, ASN1, DH, BIO
+from OpenSSL import crypto
 
 logger = logging.getLogger(__name__)
 
@@ -58,70 +58,55 @@ class Authority(models.Model):
         """
         Generate key & cert pair
         """
-        # replace this with pulling from an RSA queue for performance
-        rsa_key = RSA.gen_key(2048, m2.RSA_F4, callback=lambda: None)
-        key = EVP.PKey()
-        key.assign_rsa(rsa_key)
-        self.key = key.as_pem(callback=lambda x: settings.SECRET_KEY)
-        request = X509.Request()
-        request.set_version(2)
-        request.set_pubkey(key)
-        request_subject_name = X509.X509_Name()
-        request_subject_name.CN = self.common_name
-        request.set_subject_name(request_subject_name)
-        request.sign(key, 'sha256')
-        cert = X509.X509()
+        # TODO: DoS protection
+        # Generate key
+        pkey = crypto.PKey()
+        pkey.generate_key(crypto.TYPE_RSA, 2048)
+        self.key = crypto.dump_privatekey(crypto.FILETYPE_PEM, pkey, 'AES256', settings.SECRET_KEY.encode('utf-8'))
+        # Make a signing request
+        request = crypto.X509Req()
+        subject = request.get_subject().CN = self.common_name
+        request.set_pubkey(pkey)
+        request.sign(pkey, 'sha256')
+        # Make the certificate
+        cert = crypto.X509()
         cert.set_serial_number(self.id)
         cert.set_version(2)
         cert.set_subject(request.get_subject())
-        cert_issuer_name = X509.X509_Name()
         if self.usage == Authority.ROOT:
-            cert_issuer_name.CN = self.common_name
+            cert.set_issuer(cert.get_subject())
         else:
-            cert_issuer_name.CN = self.parent.common_name
-        cert.set_issuer(cert_issuer_name)
-        cert.set_pubkey(key)
-        now = ASN1.ASN1_UTCTIME()
-        now.set_datetime(datetime.datetime.now())
-        nowPlusTenYears = ASN1.ASN1_UTCTIME()
-        nowPlusTenYears.set_datetime(datetime.datetime.now() + datetime.timedelta(days=365*10))
-        cert.set_not_before(now)
-        cert.set_not_after(nowPlusTenYears)
+            cert.set_issuer(self.parent._cert().get_subject())
+        cert.set_pubkey(pkey)
+        tenYears = datetime.timedelta(days=365*10)
+        cert.gmtime_adj_notBefore(0)
+        cert.gmtime_adj_notAfter(int(tenYears.total_seconds()))
         if self.usage == Authority.ROOT:
-            cert.add_ext(X509.new_extension('basicConstraints', 'CA:TRUE'))
-            cert.add_ext(X509.new_extension('keyUsage', 'Certificate Sign, CRL Sign'))
-            #cert.add_ext(X509.new_extension('subjectKeyIdentifier', 'hash'))
-            #cert.add_ext(X509.new_extension('authorityKeyIdentifier', 'keyid,issuer:always'))
+            cert.add_extensions([
+                crypto.X509Extension(b'basicConstraints', False, b'CA:TRUE'),
+                crypto.X509Extension(b'keyUsage', False, b'Certificate Sign, CRL Sign'),
+                #crypto.X509Extension('subjectKeyIdentifier', b'hash'),
+                #crypto.X509Extension('authorityKeyIdentifier', b'keyid,issuer:always'),
+            ])
         elif self.usage == Authority.DOMAIN:
-            cert.add_ext(X509.new_extension('basicConstraints', 'CA:FALSE'))
-            cert.add_ext(X509.new_extension('extendedKeyUsage', 'TLS Web Server Authentication'))
-            cert.add_ext(X509.new_extension('keyUsage', 'Digital Signature, Key Encipherment'))
-            # should the root have this also?
-            cert.set_subject(request.get_subject())
-            cert.set_pubkey(request.get_pubkey())
+            cert.add_extensions([
+                crypto.X509Extension(b'basicConstraints', False, b'CA:FALSE'),
+                crypto.X509Extension(b'extendedKeyUsage', False, b'TLS Web Server Authentication'),
+                crypto.X509Extension(b'keyUsage', False, b'Digital Signature, Key Encipherment'),
+            ])
         elif self.usage == Authority.CLIENT:
-            cert.add_ext(X509.new_extension('basicConstraints', 'CA:FALSE'))
-            cert.add_ext(X509.new_extension('extendedKeyUsage', 'TLS Web Client Authentication'))
-            cert.add_ext(X509.new_extension('keyUsage', 'Digital Signature'))
-            # should the root have this also?
-            cert.set_subject(request.get_subject())
-            cert.set_pubkey(request.get_pubkey())
+            cert.add_extensions([
+                crypto.X509Extension(b'basicConstraints', False, b'CA:FALSE'),
+                crypto.X509Extension(b'extendedKeyUsage', False, b'TLS Web Client Authentication'),
+                crypto.X509Extension(b'keyUsage', False, b'Digital Signature'),
+            ])
 
         if self.usage == Authority.ROOT:
-            # sign the cert with its own key
-            cert.sign(key, 'sha256')
+            cert.sign(pkey, 'sha256')
         else:
-            # sign the cert with the root key
             cert.sign(self.parent._pkey(), 'sha256')
-        self.cert = cert.as_pem()
 
-    def cert_as_text(self):
-        """
-        Return a plain-text human readable version of the cert
-        """
-        if not self.cert:
-            return ""
-        return X509.load_cert_string(str(self.cert)).as_text()
+        self.cert = crypto.dump_certificate(crypto.FILETYPE_PEM, cert)
 
     def write_cert_chain(self, fileobj):
         """
@@ -144,14 +129,23 @@ class Authority(models.Model):
         """
         try:
             tar = TarWriter(fileobj)
-            tar.add("ssl/{self.common_name}.crt".format(self=self), self.cert_chain())
-            tar.add("ssl/{self.common_name}.key".format(self=self), self.key_decrypted())
+            tar.add("ssl/{self.common_name}.crt".format(self=self), self.cert_chain().encode('utf-8'))
+            tar.add("ssl/{self.common_name}.key".format(self=self), self.key_decrypted().encode('utf-8'))
         except Exception as e:
             logger.error(str(e))
             raise
 
     def _pkey(self):
-        return EVP.load_key_string(str(self.key), callback=lambda x: settings.SECRET_KEY)
+        return crypto.load_privatekey(crypto.FILETYPE_PEM, self.key, settings.SECRET_KEY.encode('utf-8'))
+
+    def _cert(self):
+        return crypto.load_certificate(crypto.FILETYPE_PEM, self.cert)
+
+    def cert_fingerprint(self):
+        return self._cert().digest('sha1').decode('utf-8')
+
+    def key_fingerprint(self):
+        return ""
 
     def key_decrypted(self):
         """
@@ -159,10 +153,10 @@ class Authority(models.Model):
         """
         if not self.key:
             return ""
-        return unicode(self._pkey().as_pem(cipher=None))
+        return crypto.dump_privatekey(crypto.FILETYPE_PEM, self._pkey()).decode('utf-8')
 
     def __repr__(self):
         return "{0}('{self.common_name}', user=User('{self.user.username}'), usage='{self.usage}')".format(self.__class__.__name__, self=self)
 
-    def __unicode__(self):
+    def __str__(self):
         return self.common_name
