@@ -88,6 +88,11 @@ curl -b "sessionid={{ view.request.session.session_key }}" {{ view.request.schem
               <td>PEM formatted unencrypted key</td>
               <td>{{ root.key_fingerprint }}</td>
             </tr>
+            <tr>
+              <td><a href='{% url 'domain_tar' username=username root_slug=root_slug domain=domain.common_name %}'>{{ root.slug }}.tar</a></td>
+              <td>Certificate &amp; Key archive</td>
+              <td>{{ root.key_fingerprint }}</td>
+            </tr>
           </tbody>
         </table>
         <p></p>
