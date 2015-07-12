@@ -63,6 +63,17 @@
       </div>
     </div>
   </section>
+  <section class="trust arch light">
+    <div class="container">
+      <div class="row">
+        <h4>Trust this root on arch linux</h4>
+      </div>
+      <div class="row">
+        <pre><code>curl {{ view.request.scheme }}://{{ site.domain }}{% url 'root_cert_pem' username=username root_slug=root_slug %} &gt; /etc/ca-certificates/trust-source/anchors/{{ root.slug }}.crt
+update-ca-trust</pre></code>
+      </div>
+    </div>
+  </section>
   <section class="downloads light">
     <div class="container">
       <div class="row">
@@ -79,12 +90,7 @@
           </thead>
           <tbody>
             <tr>
-              <td><a href='{% url 'root_cert_pem' username=username root_slug=root_slug ext='pem' %}'>{{ root.slug }}.pem</a></td>
-              <td>PEM formatted certificate</td>
-              <td>{{ root.cert_fingerprint }}</td>
-            </tr>
-            <tr>
-              <td><a href='{% url 'root_cert_pem' username=username root_slug=root_slug ext='crt' %}'>{{ root.slug }}.crt</a></td>
+              <td><a href='{% url 'root_cert_pem' username=username root_slug=root_slug %}'>{{ root.slug }}.crt</a></td>
               <td>PEM formatted certificate</td>
               <td>{{ root.cert_fingerprint }}</td>
             </tr>
@@ -96,17 +102,6 @@
           </tbody>
         </table>
         <p></p>
-      </div>
-    </div>
-  </section>
-  <section class="trust arch light">
-    <div class="container">
-      <div class="row">
-        <h4>Trust this root on arch linux</h4>
-      </div>
-      <div class="row">
-        <pre><code>curl {{ view.request.scheme }}://{{ site.domain }}{% url 'root_cert_pem' username=username root_slug=root_slug ext='pem' %} &gt; /etc/ca-certificates/trust-source/anchors/{{ root.slug }}.pem
-update-ca-trust</pre></code>
       </div>
     </div>
   </section>

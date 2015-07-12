@@ -9,8 +9,8 @@ urlpatterns = patterns('',
     # e.g. /user/alice/
     url(r'^user/(?P<username>\w+)/$', views.UserDetailView.as_view(), name='user_detail'),
 
-    # e.g. /user/alice/root/my-main-ca.pem
-    url(r'^user/(?P<username>\w+)/root/(?P<root_slug>[\w_-]+).(?P<ext>crt|pem)$', views.RootCertPemView.as_view(), name='root_cert_pem'),
+    # e.g. /user/alice/root/my-main-ca.crt
+    url(r'^user/(?P<username>\w+)/root/(?P<root_slug>[\w_-]+).crt$', views.RootCertPemView.as_view(), name='root_cert_pem'),
 
     # e.g. /user/alice/root/my-main-ca.der
     url(r'^user/(?P<username>\w+)/root/(?P<root_slug>[\w_-]+).der$', views.RootCertDerView.as_view(), name='root_cert_der'),
@@ -22,10 +22,10 @@ urlpatterns = patterns('',
     url(r'^user/(?P<username>\w+)/root/(?P<root_slug>[\w_-]+)/$', views.RootDetailView.as_view(), name='root_detail'),
 
     # e.g. /user/alice/root/my-main-ca/domain/*.alice.com.chain.crt
-    url(r'^user/(?P<username>\w+)/root/(?P<root_slug>[\w_-]+)/domain/(?P<domain>(\*\.)?[\w\-\.]*[\w\-]).chain.(?P<ext>crt|pem)$', views.DomainCertChainPemView.as_view(), name='domain_cert_chain_pem'),
+    url(r'^user/(?P<username>\w+)/root/(?P<root_slug>[\w_-]+)/domain/(?P<domain>(\*\.)?[\w\-\.]*[\w\-]).chain.crt$', views.DomainCertChainPemView.as_view(), name='domain_cert_chain_pem'),
 
     # e.g. /user/alice/root/my-main-ca/domain/*.alice.com.crt
-    url(r'^user/(?P<username>\w+)/root/(?P<root_slug>[\w_-]+)/domain/(?P<domain>(\*\.)?[\w\-\.]*[\w\-]).(?P<ext>crt|pem)$', views.DomainCertPemView.as_view(), name='domain_cert_pem'),
+    url(r'^user/(?P<username>\w+)/root/(?P<root_slug>[\w_-]+)/domain/(?P<domain>(\*\.)?[\w\-\.]*[\w\-]).crt$', views.DomainCertPemView.as_view(), name='domain_cert_pem'),
 
     # e.g. /user/alice/root/my-main-ca/domain/*.alice.com.key
     url(r'^user/(?P<username>\w+)/root/(?P<root_slug>[\w_-]+)/domain/(?P<domain>(\*\.)?[\w\-\.]*[\w\-]).key$', views.DomainKeyPemView.as_view(), name='domain_key_pem'),
