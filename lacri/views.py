@@ -164,10 +164,24 @@ class DomainCertPemView(DomainDetailBase):
         response.write(context['domain'].cert)
         return response
 
+class DomainCertChainPemView(DomainDetailBase):
+    def get(self, request, *args, **kwargs):
+        context = self.get_context_data(**kwargs)
+        response = HttpResponse(content_type="application/x-pem-file")
+        context['domain'].write_cert_chain(response)
+        return response
+
 class DomainCertDerView(DomainDetailBase):
     def get(self, request, *args, **kwargs):
         content_type="application/x-x509-ca-cert"
         raise NotImplementedError()
+
+class DomainKeyPemView(VerifyUserMixin, DomainDetailBase):
+    def get(self, request, *args, **kwargs):
+        context = self.get_context_data(**kwargs)
+        response = HttpResponse(content_type="application/x-pem-file")
+        response.write(context['domain'].key_decrypted())
+        return response
 
 class DomainTarView(VerifyUserMixin, DomainDetailBase):
     def get(self, request, *args, **kwargs):

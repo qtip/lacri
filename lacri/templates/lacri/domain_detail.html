@@ -57,4 +57,51 @@ curl -b "sessionid={{ view.request.session.session_key }}" {{ view.request.schem
       </div>
     </div>
   </section>
+
+  <section class="downloads light">
+    <div class="container">
+      <div class="row">
+        <h4>Downloads</h4>
+      </div>
+      <div class="row">
+        <table class="u-full-width">
+          <thead>
+            <tr>
+              <th>File</th>
+              <th>Description</th>
+              <th>Fingerprint</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><a href='{% url 'domain_cert_pem' username=username root_slug=root_slug domain=domain.common_name ext='pem' %}'>{{ root.slug }}.pem</a></td>
+              <td>PEM formatted certificate</td>
+              <td>{{ domain.cert_fingerprint }}</td>
+            </tr>
+            <tr>
+              <td><a href='{% url 'domain_cert_pem' username=username root_slug=root_slug domain=domain.common_name ext='crt' %}'>{{ root.slug }}.crt</a></td>
+              <td>PEM formatted certificate</td>
+              <td>{{ domain.cert_fingerprint }}</td>
+            </tr>
+            <tr>
+              <td><a href='{% url 'domain_cert_chain_pem' username=username root_slug=root_slug domain=domain.common_name ext='pem' %}'>{{ root.slug }}.chain.pem</a></td>
+              <td>PEM formatted certificate chain</td>
+              <td>&nbsp;</td>
+            </tr>
+            <tr>
+              <td><a href='{% url 'domain_cert_chain_pem' username=username root_slug=root_slug domain=domain.common_name ext='crt' %}'>{{ root.slug }}.chain.crt</a></td>
+              <td>PEM formatted certificate chain</td>
+              <td>&nbsp;</td>
+            </tr>
+            <tr>
+              <td><a href='{% url 'domain_key_pem' username=username root_slug=root_slug domain=domain.common_name %}'>{{ root.slug }}.key</a></td>
+              <td>PEM formatted unencrypted key</td>
+              <td>{{ root.key_fingerprint }}</td>
+            </tr>
+          </tbody>
+        </table>
+        <p></p>
+      </div>
+    </div>
+  </section>
 {% endblock %}
