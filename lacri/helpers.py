@@ -30,3 +30,14 @@ class TarWriter(object):
     def close(self, *args, **kwargs):
         self.tar.close(*args, **kwargs)
 
+def create_form(form_class, request, **kwargs):
+    kwargs = kwargs.copy()
+    if request.method in ('POST', 'PUT'):
+        kwargs.update({
+            'data': request.POST,
+            'files': request.FILES,
+        })
+    form = form_class(**kwargs)
+    if all(form.add_prefix(field) in request.POST for field, value in form.fields.items() if value.required):
+        form = form_class(**kwargs)
+    return form
