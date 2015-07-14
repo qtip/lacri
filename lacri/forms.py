@@ -26,3 +26,9 @@ class CreateDomainForm(forms.Form):
             max_length=100, 
             widget=forms.TextInput(attrs={'placeholder': 'something.example.com', 'style': 'visibility: hidden;'}),
     )
+
+class CreateClientForm(forms.Form):
+    common_name = forms.CharField(label='Client Name',
+            max_length=100,
+            widget=forms.TextInput(attrs={'placeholder': '???', 'style': 'visibility: hidden;'}),
+    )

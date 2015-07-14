@@ -12,7 +12,7 @@ from django.views.generic.base import ContextMixin, TemplateResponseMixin
 from django.contrib.sites.models import Site
 from django.contrib.auth.models import User
 from .models import Authority
-from .forms import CreateUserForm, CreateRootForm, CreateDomainForm
+from .forms import CreateUserForm, CreateRootForm, CreateDomainForm, CreateClientForm
 
 logger = logging.getLogger('lacri')
 
@@ -110,17 +110,29 @@ class RootDetailView(TemplateResponseMixin, VerifyUserMixin, RootDetailBase):
 
     def get(self, request, *args, **kwargs):
         context = self.get_context_data(**kwargs)
-        form = context['form'] = CreateDomainForm()
+        domain_form = context['domain_form'] = CreateDomainForm(prefix="domain")
+        client_form = context['client_form'] = CreateClientForm(prefix="client")
         return self.render_to_response(context)
 
     def post(self, request, *args, **kwargs):
         context = self.get_context_data(**kwargs)
-        form = context['form'] = CreateDomainForm(request.POST)
-        if form.is_valid():
-            common_name = form.cleaned_data['common_name']
+        domain_form = context['domain_form'] = CreateDomainForm(prefix="domain")
+        if all(domain_form.add_prefix(field) in request.POST for field in domain_form.fields):
+            domain_form = context['domain_form'] = CreateDomainForm(request.POST, prefix="domain")
+        client_form = context['client_form'] = CreateClientForm(prefix="client")
+        if all(client_form.add_prefix(field) in request.POST for field in client_form.fields):
+            client_form = context['client_form'] = CreateDomainForm(request.POST, prefix="client")
+        if domain_form.is_bound and domain_form.is_valid():
+            common_name = domain_form.cleaned_data['common_name']
             domain = Authority(user=context['user'], common_name=common_name, parent=context['root'], usage=Authority.DOMAIN)
             domain.save()
             return HttpResponseRedirect(reverse('domain_detail', kwargs={'username': kwargs['username'], 'root_slug': kwargs['root_slug'], 'domain': domain.common_name}))
+        if client_form.is_bound and client_form.is_valid():
+            common_name = client_form.cleaned_data['common_name']
+            client = Authority(user=context['user'], common_name=common_name, parent=context['root'], usage=Authority.CLIENT)
+            client.save()
+            return HttpResponseRedirect(reverse('client_detail', kwargs={'username': kwargs['username'], 'root_slug': kwargs['root_slug'], 'domain': client.common_name}))
+
         return self.render_to_response(context)
 
 class RootCertPemView(RootDetailBase):

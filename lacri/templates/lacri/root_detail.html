@@ -11,17 +11,32 @@
 
 {% block js %}
   <script type="text/javascript" charset="utf-8">
-    var createRootForm = document.getElementById("create_domain_form");
-    var commonName = document.getElementById("id_common_name");
-    commonName.style.visibility = "hidden";
-    createRootForm.onsubmit = function() {
-      if (commonName.style.visibility != "visible") {
-        commonName.style.visibility = "visible";
-        commonName.focus();
-        return false;
+    var allVisible = function(nodeList) {
+      for (i = 0; i < nodeList.length; i++) {
+        if (nodeList[i].style.visibility != "visible") {
+          return false;
+        }
       }
       return true;
     }
+
+    var makePopForm = function(formQuery, inputsQuery) {
+      var form = document.querySelector(formQuery);
+      var inputs = document.querySelectorAll(inputsQuery);
+      form.onsubmit = function() {
+        if(!allVisible(inputs)) {
+          Array.prototype.forEach.call(inputs, function(input){
+            input.style.visibility = "visible";
+            input.focus();
+          });
+          return false;
+        }
+        return true;
+      }
+    }
+
+    makePopForm("#create_domain_form", "#id_domain-common_name")
+    makePopForm("#create_client_form", "#id_client-common_name")
   </script>
 {% endblock %}
 
@@ -40,8 +55,8 @@
         <div class="five columns ">
           <form method="post" id="create_domain_form">
             {% csrf_token %}
-            {{ form.common_name }}
-            <input type="submit" class="button-primary" value="Create" />
+            {{ domain_form.common_name }}
+            <input type="submit" class="button-primary" value="New Domain" />
           </form>
         </div>
       </div>
@@ -56,6 +71,38 @@
             {% for domain in domains %}
             <tr>
               <td><a href="{% url 'domain_detail' username=user.username root_slug=domain.parent.slug domain=domain.common_name%}">{{ domain.common_name }}</a></td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+  <section class="roots light">
+    <div class="container">
+      <div class="row">
+        <div class="seven columns">
+          <h4>Clients</h4>
+        </div>
+        <div class="five columns ">
+          <form method="post" id="create_client_form">
+            {% csrf_token %}
+            {{ client_form.common_name }}
+            <input type="submit" class="button-primary" value="New Client" />
+          </form>
+        </div>
+      </div>
+      <div class="row">
+        <table class="u-full-width">
+          <thead>
+            <tr>
+              <th>Name</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for client in clients %}
+            <tr>
+              <td><a href="{% url 'client_detail' username=user.username root_slug=client.parent.slug client=client.common_name%}">{{ client.common_name }}</a></td>
             </tr>
             {% endfor %}
           </tbody>
