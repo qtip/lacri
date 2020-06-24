@@ -17,6 +17,7 @@ class CreateUserForm(forms.Form):
 
 class CreateRootForm(forms.Form):
     common_name = forms.CharField(label='Root Name', 
+            required=True,
             max_length=100, 
             widget=forms.TextInput(attrs={'placeholder': 'e.g. My CA', 'style': 'visibility: hidden;'}),
     )

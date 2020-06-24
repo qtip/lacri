@@ -1,6 +1,7 @@
 {% extends 'lacri/main.html' %}
 
-{% load static %}
+{% load staticfiles %}
+{% load lacri_extras %}
 
 {% block css %}
   {{ block.super }}
@@ -11,30 +12,24 @@
 
 {% block js %}
   <script type="text/javascript" charset="utf-8">
-    function allVisible(nodeList) {
-      for (let node of nodeList) {
-        if (node.style.visibility != "visible") {
+    var allVisible = function(nodeList) {
+      for (i = 0; i < nodeList.length; i++) {
+        if (nodeList[i].style.visibility != "visible") {
           return false;
         }
       }
       return true;
     }
 
-    function makePopForm(formQuery, inputsQuery) {
-      const form = document.querySelector(formQuery);
-      const inputs = [...document.querySelectorAll(inputsQuery)];
-      for (let input of inputs) {
-        input.removeAttribute('required');
-      }
+    var makePopForm = function(formQuery, inputsQuery) {
+      var form = document.querySelector(formQuery);
+      var inputs = document.querySelectorAll(inputsQuery);
       form.onsubmit = function() {
-        const someHidden = inputs.some(input => input.style.visibility != "visible");
-        console.log(inputs, someHidden);
-        if (someHidden) {
-          for (let input of inputs) {
+        if(!allVisible(inputs)) {
+          Array.prototype.forEach.call(inputs, function(input){
             input.style.visibility = "visible";
-            input.setAttribute('required', '');
             input.focus();
-          }
+          });
           return false;
         }
         return true;
@@ -47,11 +42,46 @@
 {% endblock %}
 
 {% block details %}
-  <section class="root light">
+  <section class="authority light">
     <div class="container">
-      <h2>{{ root.common_name }}</h2>
+      <h2>{{ authority.common_name }}</h2>
     </div>
   </section>
+  {% regroup children by usage as children_list %}
+  {% for use in children_list %}
+    <section class="roots light">
+      <div class="container">
+        <div class="row">
+          <div class="seven columns">
+            <h4>{{ use.grouper | usage_to_str }}s</h4>
+          </div>
+          <div class="five columns ">
+            <form method="post" id="create_domain_form">
+              {% csrf_token %}
+              {{ domain_form.common_name }}
+              <input type="submit" class="button-primary" value="New {{ use.grouper | usage_to_str }}" />
+            </form>
+          </div>
+        </div>
+        <div class="row">
+          <table class="u-full-width">
+            <thead>
+              <tr>
+                <th>Name</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for child in use.list %}
+              <tr>
+                <td><a href="{{ child | authority_detail_url }}">{{ child.common_name }}</a></td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+  {% endfor %}
   <section class="roots light">
     <div class="container">
       <div class="row">
@@ -76,7 +106,7 @@
           <tbody>
             {% for domain in domains %}
             <tr>
-              <td><a href="{% url 'domain_detail' username=user.username root_slug=domain.parent.slug domain=domain.common_name%}">{{ domain.common_name }}</a></td>
+              {#<td><a href="{% url 'domain_detail' username=user.username slug=domain.parent.slug domain=domain.common_name%}">{{ domain.common_name }}</a></td>#}
             </tr>
             {% endfor %}
           </tbody>
@@ -90,7 +120,7 @@
         <div class="seven columns">
           <h4>Clients</h4>
         </div>
-        <div class="five columns" >
+        <div class="five columns ">
           <form method="post" id="create_client_form">
             {% csrf_token %}
             {{ client_form.common_name }}
@@ -122,7 +152,7 @@
         <h4>Trust this root on arch linux</h4>
       </div>
       <div class="row">
-        <pre><code>curl {{ view.request.scheme }}://{{ site.domain }}{% url 'root_cert_pem' username=username root_slug=root_slug %} &gt; /etc/ca-certificates/trust-source/anchors/{{ root.slug }}.crt
+        {#<pre><code>curl {{ view.request.scheme }}://{{ site.domain }}{% url 'root_cert_pem' username=username root_slug=root_slug %} &gt; /etc/ca-certificates/trust-source/anchors/{{ root.slug }}.crt#}
 update-ca-trust</pre></code>
       </div>
     </div>
@@ -143,12 +173,12 @@ update-ca-trust</pre></code>
           </thead>
           <tbody>
             <tr>
-              <td><a href='{% url 'root_cert_pem' username=username root_slug=root_slug %}'>{{ root.slug }}.crt</a></td>
+              {#<td><a href='{% url 'root_cert_pem' username=username root_slug=root_slug %}'>{{ root.slug }}.crt</a></td>#}
               <td>PEM formatted certificate</td>
               <td>{{ root.cert_fingerprint }}</td>
             </tr>
             <tr>
-              <td><a href='{% url 'root_key_pem' username=username root_slug=root_slug %}'>{{ root.slug }}.key</a></td>
+              {#<td><a href='{% url 'root_key_pem' username=username root_slug=root_slug %}'>{{ root.slug }}.key</a></td>#}
               <td>PEM formatted unencrypted key</td>
               <td>{{ root.key_fingerprint }}</td>
             </tr>

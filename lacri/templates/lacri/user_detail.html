@@ -1,6 +1,6 @@
 {% extends 'lacri/main.html' %}
 
-{% load staticfiles %}
+{% load static %}
 
 {% block css %}
   {{ block.super }}
@@ -11,17 +11,20 @@
 
 {% block js %}
   <script type="text/javascript" charset="utf-8">
-    var createRootForm = document.getElementById("create_root_form");
-    var commonName = document.getElementById("id_common_name");
+    const createRootForm = document.create_root;
+    const commonName = document.getElementById("id_common_name");
+    const createRootButton = document.getElementById("create_root_button");
     commonName.style.visibility = "hidden";
+    commonName.removeAttribute('required');
     createRootForm.onsubmit = function() {
       if (commonName.style.visibility != "visible") {
         commonName.style.visibility = "visible";
         commonName.focus();
+        commonName.setAttribute('required', '');
         return false;
       }
       return true;
-    }
+    };
   </script>
 {% endblock %}
 
@@ -34,10 +37,10 @@
           <h4>Roots</h4>
         </div>
         <div class="five columns ">
-          <form method="post" id="create_root_form">
+          <form action="" method="post" id="create_root_form" name="create_root">
             {% csrf_token %}
             {{ form.common_name }}
-            <input type="submit" class="button-primary" value="Create" />
+            <input type="submit" id="create_root_button" class="button-primary" name="xyz" value="Create" />
           </form>
         </div>
       </div>

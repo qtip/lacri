@@ -1,6 +1,6 @@
 import logging
 
-from django.core.urlresolvers import reverse
+from django.urls import reverse
 from django.shortcuts import get_object_or_404
 from django.http import HttpResponse, HttpResponseRedirect
 from django.views.generic import View
@@ -22,6 +22,7 @@ class RootDetailBase(ContextMixin, View):
         user = context['user'] = get_object_or_404(User, username=kwargs['username'])
         root = context['root'] = user.authority_set.filter(slug=kwargs['root_slug']).get()
         domains = context['domains'] = user.authority_set.filter(usage=Authority.DOMAIN, parent=root)
+        clients = context['clients'] = user.authority_set.filter(usage=Authority.CLIENT, parent=root)
         return context
 
 class RootDetailView(TemplateResponseMixin, VerifyUserMixin, RootDetailBase):

@@ -11,13 +11,18 @@ from django.contrib.auth.models import User
 from django.contrib.sites.models import Site
 
 from .helpers import TarWriter
-from OpenSSL import crypto
+from cryptography import x509
+from cryptography.x509 import NameOID
+from cryptography.x509.extensions import KeyUsage
+from cryptography.hazmat.backends import default_backend
+from cryptography.hazmat.primitives import hashes, serialization
+from cryptography.hazmat.primitives.asymmetric import rsa
 
 logger = logging.getLogger(__name__)
 
 class Authority(models.Model):
-    user = models.ForeignKey(User)
-    parent = models.ForeignKey('self', null=True, blank=True)
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    parent = models.ForeignKey('self', null=True, blank=True, on_delete=models.CASCADE)
     is_enabled = models.BooleanField(default=True)
     common_name = models.CharField(max_length=256)
     slug = models.SlugField()
@@ -48,11 +53,17 @@ class Authority(models.Model):
         the vpn service
         """
         logger.debug("saving %r" % self)
+        adding = self._state.adding
         self.slug = slugify(self.common_name)
-        super(Authority, self).save(*args, **kwargs)
+        super().save(*args, **kwargs)
         if not all([self.key, self.cert]):
-            self.generate()
-            self.save()
+            try:
+                self.generate()
+                self.save()
+            except:
+                if adding:
+                    self.delete()
+                raise
 
     def generate(self):
         """
@@ -60,53 +71,48 @@ class Authority(models.Model):
         """
         # TODO: DoS protection
         # Generate key
-        pkey = crypto.PKey()
-        pkey.generate_key(crypto.TYPE_RSA, 2048)
-        self.key = crypto.dump_privatekey(crypto.FILETYPE_PEM, pkey, 'AES256', settings.SECRET_KEY.encode('utf-8'))
+        pkey = rsa.generate_private_key(public_exponent=65537, key_size=2048, backend=default_backend())
+        self.key = pkey.private_bytes(
+                encoding=serialization.Encoding.PEM,
+                format=serialization.PrivateFormat.TraditionalOpenSSL,
+                encryption_algorithm=serialization.BestAvailableEncryption(settings.SECRET_KEY.encode('utf-8'))
+        ).decode('utf-8')
+
+        # Set up the name
+        name = x509.Name([x509.NameAttribute(NameOID.COMMON_NAME, self.common_name)])
+
         # Make a signing request
-        request = crypto.X509Req()
-        subject = request.get_subject().CN = self.common_name
-        request.set_pubkey(pkey)
-        request.sign(pkey, 'sha256')
+        csr_builder = x509.CertificateSigningRequestBuilder()
+        csr_builder = csr_builder.subject_name(name)
+        csr = csr_builder.sign(pkey, hashes.SHA256(), default_backend())
+
         # Make the certificate
-        cert = crypto.X509()
-        cert.set_serial_number(self.id)
-        cert.set_version(2)
-        cert.set_subject(request.get_subject())
+        cert_builder = x509.CertificateBuilder()
+        cert_builder = cert_builder.subject_name(name)
+        cert_builder = cert_builder.public_key(pkey.public_key())
+        cert_builder = cert_builder.serial_number(self.id)
+        cert_builder = cert_builder.not_valid_before(datetime.datetime.utcnow())
+        cert_builder = cert_builder.add_extension(KeyUsage(
+            digital_signature = self.usage in (Authority.DOMAIN, Authority.CLIENT),
+            content_commitment = False,
+            key_encipherment = self.usage == Authority.DOMAIN,
+            data_encipherment = False,
+            key_agreement = False,
+            key_cert_sign = self.usage == Authority.ROOT,
+            crl_sign = self.usage == Authority.ROOT,
+            encipher_only = False,
+            decipher_only = False,
+        ), critical=False)
         if self.usage == Authority.ROOT:
-            cert.set_issuer(cert.get_subject())
+            cert_builder = cert_builder.issuer_name(name)
+            cert = cert_builder.sign(pkey, hashes.SHA256(), default_backend())
         else:
-            cert.set_issuer(self.parent._cert().get_subject())
-        cert.set_pubkey(pkey)
-        tenYears = datetime.timedelta(days=365*10)
-        cert.gmtime_adj_notBefore(0)
-        cert.gmtime_adj_notAfter(int(tenYears.total_seconds()))
-        if self.usage == Authority.ROOT:
-            cert.add_extensions([
-                crypto.X509Extension(b'basicConstraints', False, b'CA:TRUE'),
-                crypto.X509Extension(b'keyUsage', False, b'Certificate Sign, CRL Sign'),
-                #crypto.X509Extension('subjectKeyIdentifier', b'hash'),
-                #crypto.X509Extension('authorityKeyIdentifier', b'keyid,issuer:always'),
-            ])
-        elif self.usage == Authority.DOMAIN:
-            cert.add_extensions([
-                crypto.X509Extension(b'basicConstraints', False, b'CA:FALSE'),
-                crypto.X509Extension(b'extendedKeyUsage', False, b'TLS Web Server Authentication'),
-                crypto.X509Extension(b'keyUsage', False, b'Digital Signature, Key Encipherment'),
-            ])
-        elif self.usage == Authority.CLIENT:
-            cert.add_extensions([
-                crypto.X509Extension(b'basicConstraints', False, b'CA:FALSE'),
-                crypto.X509Extension(b'extendedKeyUsage', False, b'TLS Web Client Authentication'),
-                crypto.X509Extension(b'keyUsage', False, b'Digital Signature'),
-            ])
+            cert_builder = cert_builder.issuer_name(self.parent._cert().subject)
+            cert = cert_builder.sign(self.parent._pkey(), hashes.SHA256(), default_backend())
 
-        if self.usage == Authority.ROOT:
-            cert.sign(pkey, 'sha256')
-        else:
-            cert.sign(self.parent._pkey(), 'sha256')
 
-        self.cert = crypto.dump_certificate(crypto.FILETYPE_PEM, cert)
+        self.cert = cert.public_bytes(serialization.Encoding.PEM).decode('utf-8')
+        return
 
     def write_cert_chain(self, fileobj):
         """
@@ -136,13 +142,17 @@ class Authority(models.Model):
             raise
 
     def _pkey(self):
-        return crypto.load_privatekey(crypto.FILETYPE_PEM, self.key, settings.SECRET_KEY.encode('utf-8'))
+        return serialization.load_pem_private_key(
+                self.key.encode('utf-8'),
+                password=settings.SECRET_KEY.encode('utf-8'),
+                backend=default_backend(),
+        )
 
     def _cert(self):
-        return crypto.load_certificate(crypto.FILETYPE_PEM, self.cert)
+        return x509.load_pem_x509_certificate(self.cert.encode('utf-8'), default_backend())
 
     def cert_fingerprint(self):
-        return self._cert().digest('sha1').decode('utf-8')
+        return self._cert().fingerprint(hashes.SHA256()).hex()
 
     def key_fingerprint(self):
         return ""
@@ -153,7 +163,11 @@ class Authority(models.Model):
         """
         if not self.key:
             return ""
-        return crypto.dump_privatekey(crypto.FILETYPE_PEM, self._pkey()).decode('utf-8')
+        return self._pkey().private_bytes(
+                encoding=serialization.Encoding.PEM,
+                format=serialization.PrivateFormat.TraditionalOpenSSL,
+                encryption_algorithm=serialization.NoEncryption(),
+        ).decode('utf-8')
 
     def __repr__(self):
         return "{0}('{self.common_name}', user=User('{self.user.username}'), usage='{self.usage}')".format(self.__class__.__name__, self=self)

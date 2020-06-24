@@ -1,11 +1,11 @@
 import logging
 
-from django.core.urlresolvers import reverse
+from django.urls import reverse
 from django.shortcuts import get_object_or_404
 from django.http import HttpResponse, HttpResponseRedirect
 from django.contrib.auth import authenticate, login
 from django.db import IntegrityError
-from django.views.generic import View
+from django.views.generic import View, TemplateView
 from django.views.generic.base import ContextMixin, TemplateResponseMixin
 
 from django.contrib.sites.models import Site
@@ -70,6 +70,27 @@ class VerifyUserMixin(object):
         if request.user.username != kwargs['username']:
             return HttpResponse('Unauthorized', status=401)
         return super(VerifyUserMixin, self).dispatch(request, *args, **kwargs)
+
+class AuthorityView(TemplateView):
+    def get_context_data(self, **kwargs):
+        context = super(AuthorityView, self).get_context_data(**kwargs)
+        user = context['user'] = get_object_or_404(User, username=kwargs['username'])
+        roots = context['roots'] = user.authority_set.filter(usage=Authority.ROOT)
+
+        if 'slug' in kwargs and 'common_name' in kwargs:
+            authority = context['authority'] = user.authority_set.filter(
+                parent__slug=kwargs['slug'],
+                common_name=kwargs['common_name'],
+            )
+        elif 'slug' in kwargs:
+            authority = context['authority'] = user.authority_set.filter(slug=kwargs['slug'])
+
+        if authority:
+            children = context['children'] = user.authority_set.filter(parent=authority).order_by('usage')
+            domains = context['domains'] = children.filter(usage=Authority.DOMAIN)
+            clients = context['clients'] = children.filter(usage=Authority.CLIENT)
+
+        return context
 
 class UserDetailView(VerifyUserMixin, TemplateResponseMixin, ContextMixin, View):
     template_name = "lacri/user_detail.html"

@@ -1,0 +1,59 @@
+{% extends 'lacri/main.html' %}
+
+{% load static %}
+
+{% block css %}
+  {{ block.super }}
+  <link href="{% static 'lacri/css/main.css' %}" rel="stylesheet">
+{% endblock %}
+
+{%block title %}lacri{% endblock %}
+
+{% block details %}
+  <section class="client light">
+    <div class="container">
+      <h2>{{ client.common_name }}</h2>
+    </div>
+  </section>
+  <section class="downloads light">
+    <div class="container">
+      <div class="row">
+        <h4>Downloads</h4>
+      </div>
+      <div class="row">
+        <table class="u-full-width">
+          <thead>
+            <tr>
+              <th>File</th>
+              <th>Description</th>
+              <th>Fingerprint</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><a href='{% url 'client_cert_pem' username=username root_slug=root_slug client=client.common_name %}'>{{ root.slug }}.crt</a></td>
+              <td>PEM formatted certificate</td>
+              <td>{{ client.cert_fingerprint }}</td>
+            </tr>
+            <tr>
+              <td><a href='{% url 'client_cert_chain_pem' username=username root_slug=root_slug client=client.common_name %}'>{{ root.slug }}.chain.crt</a></td>
+              <td>PEM formatted certificate chain</td>
+              <td>&nbsp;</td>
+            </tr>
+            <tr>
+              <td><a href='{% url 'client_key_pem' username=username root_slug=root_slug client=client.common_name %}'>{{ root.slug }}.key</a></td>
+              <td>PEM formatted unencrypted key</td>
+              <td>{{ root.key_fingerprint }}</td>
+            </tr>
+            <tr>
+              <td><a href='{% url 'client_tar' username=username root_slug=root_slug client=client.common_name %}'>{{ root.slug }}.tar</a></td>
+              <td>Certificate &amp; Key archive</td>
+              <td>{{ root.key_fingerprint }}</td>
+            </tr>
+          </tbody>
+        </table>
+        <p></p>
+      </div>
+    </div>
+  </section>
+{% endblock %}

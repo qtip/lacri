@@ -1,5 +1,4 @@
 from django.contrib import admin
-from django.utils.safestring import mark_safe, mark_for_escaping
 
 from lacri.models import Authority
 
