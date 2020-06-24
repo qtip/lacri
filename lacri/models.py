@@ -16,8 +16,8 @@ from OpenSSL import crypto
 logger = logging.getLogger(__name__)
 
 class Authority(models.Model):
-    user = models.ForeignKey(User)
-    parent = models.ForeignKey('self', null=True, blank=True)
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    parent = models.ForeignKey('self', on_delete=models.CASCADE, null=True, blank=True)
     is_enabled = models.BooleanField(default=True)
     common_name = models.CharField(max_length=256)
     slug = models.SlugField()
