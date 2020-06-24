@@ -59,3 +59,4 @@ target/
 # from ./manage.py collectstatic
 /static
 
+db.sqlite3
