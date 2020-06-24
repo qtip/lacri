@@ -92,6 +92,7 @@ class Authority(models.Model):
         cert_builder = cert_builder.public_key(pkey.public_key())
         cert_builder = cert_builder.serial_number(self.id)
         cert_builder = cert_builder.not_valid_before(datetime.datetime.utcnow())
+        cert_builder = cert_builder.not_valid_after(datetime.datetime.utcnow() + datetime.timedelta(days=365 * 10))
         cert_builder = cert_builder.add_extension(KeyUsage(
             digital_signature = self.usage in (Authority.DOMAIN, Authority.CLIENT),
             content_commitment = False,
